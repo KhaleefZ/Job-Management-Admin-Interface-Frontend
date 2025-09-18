@@ -56,11 +56,15 @@ class ApiClient {
 
     // Add auth token if available
     const token = localStorage.getItem('auth_token');
+    console.log('API Client - Token from localStorage:', token);
     if (token) {
       config.headers = {
         ...config.headers,
         Authorization: `Bearer ${token}`,
       };
+      console.log('API Client - Authorization header set:', `Bearer ${token.substring(0, 20)}...`);
+    } else {
+      console.log('API Client - No token found in localStorage');
     }
 
     try {

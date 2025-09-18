@@ -7,6 +7,7 @@ import { HomePage } from "@/components/home-page"
 import { FindTalentsPage } from "@/components/find-talents-page"
 import { AboutUsPage } from "@/components/about-us-page"
 import { TestimonialsPage } from "@/components/testimonials-page"
+import { ConnectionTest } from "@/components/connection-test"
 import { Toaster } from "@/components/ui/toaster"
 import { useState } from "react"
 
@@ -29,6 +30,8 @@ export default function Home() {
         return <AboutUsPage />
       case "Testimonials":
         return <TestimonialsPage />
+      case "Connection Test":
+        return <ConnectionTest />
       default:
         return <HomePage 
           onFindJobsClick={() => setActiveTab("Find Jobs")}

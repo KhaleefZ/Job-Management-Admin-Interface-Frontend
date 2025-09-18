@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label"
 import { Job, useJobStore } from "@/lib/job-store"
 import { toast } from "@/hooks/use-toast"
 import { apiClient } from "@/lib/api-client"
+import { useAuth } from "@/lib/auth-context"
+import { AuthModal } from "@/components/auth-modal"
 import { 
   MapPin, 
   Clock, 
@@ -41,9 +43,11 @@ interface JobDetailsModalProps {
 }
 
 export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) {
+  const { isAuthenticated, user } = useAuth()
   const [showApplicationForm, setShowApplicationForm] = useState(false)
   const [applicationSubmitted, setApplicationSubmitted] = useState(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
   const [applicationData, setApplicationData] = useState({
     fullName: "",
     email: "",
@@ -52,6 +56,17 @@ export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) 
     resume: null as File | null
   })
   const toggleLike = useJobStore(state => state.toggleLike)
+
+  // Pre-fill form with user data when authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setApplicationData(prev => ({
+        ...prev,
+        fullName: user.name || "",
+        email: user.email || ""
+      }))
+    }
+  }, [isAuthenticated, user])
 
   if (!job) return null
 
@@ -132,6 +147,8 @@ export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) 
       const resumeUrl = applicationData.resume ? `/uploads/resumes/${applicationData.resume.name}` : undefined
 
       // Submit application via API
+      console.log('Submitting application - isAuthenticated:', isAuthenticated, 'user:', user);
+      console.log('Job ID:', job!.id.toString());
       await apiClient.applyToJob(job!.id.toString(), {
         full_name: applicationData.fullName,
         email: applicationData.email,
@@ -468,12 +485,19 @@ export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) 
                   </div>
                   <div className="ml-6">
                     <Button 
-                      onClick={() => setShowApplicationForm(true)}
+                      onClick={() => {
+                        console.log('Apply button clicked - isAuthenticated:', isAuthenticated, 'user:', user);
+                        if (isAuthenticated) {
+                          setShowApplicationForm(true)
+                        } else {
+                          setShowAuthModal(true)
+                        }
+                      }}
                       size="lg"
                       className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg px-8 py-3"
                     >
                       <Send className="h-4 w-4 mr-2" />
-                      Apply Now
+                      {isAuthenticated ? "Apply Now" : "Login to Apply"}
                     </Button>
                   </div>
                 </div>
@@ -605,6 +629,13 @@ export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) 
           </div>
         )}
       </DialogContent>
+      
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)}
+        defaultTab="login"
+      />
+      
     </Dialog>
   )
 }

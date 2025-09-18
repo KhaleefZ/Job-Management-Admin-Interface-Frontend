@@ -6,17 +6,15 @@ export interface Job {
   id: number
   title: string
   company: string
-  logo: string
+  logo?: string
   experience: string
   location: string
   salary: string
   salaryValue: number
   description: string
   postedTime: string
-  jobType: string
+  jobType: "full-time" | "part-time" | "contract" | "remote" | "internship"
   status: "published" | "draft"
-  requirements?: string
-  responsibilities?: string
   applicationDeadline?: Date
   createdAt: Date
   isLiked?: boolean
