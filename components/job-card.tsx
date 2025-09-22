@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { JobDetailsModal } from "@/components/job-details-modal"
+import { ApplicationModal } from "@/components/application-modal"
 import { Job, useJobStore } from "@/lib/job-store"
 import Image from "next/image"
 import { useState } from "react"
@@ -17,6 +18,7 @@ interface JobCardProps {
 export function JobCard({ job }: JobCardProps) {
   const [imageError, setImageError] = useState(false)
   const [showJobDetails, setShowJobDetails] = useState(false)
+  const [showApplicationModal, setShowApplicationModal] = useState(false)
   const toggleLike = useJobStore(state => state.toggleLike)
 
   // Map company names to actual logos with fallbacks
@@ -173,7 +175,7 @@ export function JobCard({ job }: JobCardProps) {
 
       {/* Apply Button */}
       <Button 
-        onClick={() => setShowJobDetails(true)}
+        onClick={() => setShowApplicationModal(true)}
         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors duration-200"
       >
         Apply Now
@@ -184,6 +186,13 @@ export function JobCard({ job }: JobCardProps) {
         job={job}
         isOpen={showJobDetails}
         onClose={() => setShowJobDetails(false)}
+      />
+
+      {/* Application Modal */}
+      <ApplicationModal
+        job={job}
+        isOpen={showApplicationModal}
+        onClose={() => setShowApplicationModal(false)}
       />
     </Card>
   )

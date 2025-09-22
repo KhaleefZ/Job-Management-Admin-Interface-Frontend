@@ -13,15 +13,13 @@ import { useState } from "react"
 
 export default function Home() {
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [activeTab, setActiveTab] = useState("Home")
+  const [activeTab, setActiveTab] = useState("Find Jobs")
+  const [showConnectionTest, setShowConnectionTest] = useState(false)
 
   const renderActiveComponent = () => {
     switch (activeTab) {
       case "Home":
-        return <HomePage 
-          onFindJobsClick={() => setActiveTab("Find Jobs")}
-          onCreateJobClick={() => setShowCreateModal(true)} 
-        />
+        return <JobListPage onCreateJob={() => setShowCreateModal(true)} />
       case "Find Jobs":
         return <JobListPage onCreateJob={() => setShowCreateModal(true)} />
       case "Find Talents":
@@ -30,13 +28,8 @@ export default function Home() {
         return <AboutUsPage />
       case "Testimonials":
         return <TestimonialsPage />
-      case "Connection Test":
-        return <ConnectionTest />
       default:
-        return <HomePage 
-          onFindJobsClick={() => setActiveTab("Find Jobs")}
-          onCreateJobClick={() => setShowCreateModal(true)} 
-        />
+        return <JobListPage onCreateJob={() => setShowCreateModal(true)} />
     }
   }
 
@@ -47,6 +40,38 @@ export default function Home() {
         onTabChange={setActiveTab}
         onCreateJobClick={() => setShowCreateModal(true)} 
       />
+      
+      {/* Development Connection Test Toggle */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed top-4 right-4 z-50">
+          <button
+            onClick={() => setShowConnectionTest(!showConnectionTest)}
+            className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs hover:bg-blue-600"
+          >
+            {showConnectionTest ? 'Hide' : 'Show'} Connection Test
+          </button>
+        </div>
+      )}
+
+      {/* Connection Test Panel */}
+      {showConnectionTest && process.env.NODE_ENV === 'development' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Backend Connection Test</h2>
+              <button
+                onClick={() => setShowConnectionTest(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4">
+              <ConnectionTest />
+            </div>
+          </div>
+        </div>
+      )}
       
       {renderActiveComponent()}
 

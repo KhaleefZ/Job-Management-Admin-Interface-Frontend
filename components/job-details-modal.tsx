@@ -13,8 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Job, useJobStore } from "@/lib/job-store"
 import { toast } from "@/hooks/use-toast"
 import { apiClient } from "@/lib/api-client"
-import { useAuth } from "@/lib/auth-context"
-import { AuthModal } from "@/components/auth-modal"
+import { ApplicationModal } from "@/components/application-modal"
 import { 
   MapPin, 
   Clock, 
@@ -43,11 +42,10 @@ interface JobDetailsModalProps {
 }
 
 export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) {
-  const { isAuthenticated, user } = useAuth()
   const [showApplicationForm, setShowApplicationForm] = useState(false)
   const [applicationSubmitted, setApplicationSubmitted] = useState(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
-  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isApplicationModalOpen, setIsApplicationModalOpen] = useState(false)
   const [applicationData, setApplicationData] = useState({
     fullName: "",
     email: "",
@@ -56,17 +54,6 @@ export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) 
     resume: null as File | null
   })
   const toggleLike = useJobStore(state => state.toggleLike)
-
-  // Pre-fill form with user data when authenticated
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      setApplicationData(prev => ({
-        ...prev,
-        fullName: user.name || "",
-        email: user.email || ""
-      }))
-    }
-  }, [isAuthenticated, user])
 
   if (!job) return null
 
@@ -147,7 +134,7 @@ export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) 
       const resumeUrl = applicationData.resume ? `/uploads/resumes/${applicationData.resume.name}` : undefined
 
       // Submit application via API
-      console.log('Submitting application - isAuthenticated:', isAuthenticated, 'user:', user);
+      console.log('Submitting application - isAuthenticated:' );
       console.log('Job ID:', job!.id.toString());
       await apiClient.applyToJob(job!.id.toString(), {
         full_name: applicationData.fullName,
@@ -277,7 +264,7 @@ export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-8">
         {!showApplicationForm && !applicationSubmitted ? (
           <div>
             <DialogHeader>
@@ -305,7 +292,7 @@ export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) 
                     <Badge variant="secondary">{job.jobType}</Badge>
                     <Badge variant="outline">{job.experience}</Badge>
                     <Badge variant="outline" className="text-green-600">
-                      <DollarSign className="h-3 w-3 mr-1" />
+                      <span className="text-xs mr-1">₹</span>
                       {job.salary}
                     </Badge>
                   </div>
@@ -377,36 +364,36 @@ export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) 
 
             <div className="mt-6 space-y-6">
               {/* Job Overview */}
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold text-foreground mb-4">Job Overview</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="p-8 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
+                <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-8 text-center">Job Overview</h3>
+                <div className="grid grid-cols-4 gap-12">
                   <div className="text-center">
-                    <div className="h-10 w-10 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <Briefcase className="h-5 w-5 text-blue-600" />
+                    <div className="h-16 w-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Briefcase className="h-8 w-8 text-blue-600" />
                     </div>
-                    <div className="text-xs text-muted-foreground">Experience</div>
-                    <div className="font-semibold">{job.experience}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Experience</div>
+                    <div className="text-xl font-semibold text-gray-900 dark:text-gray-100">{job.experience}</div>
                   </div>
                   <div className="text-center">
-                    <div className="h-10 w-10 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <DollarSign className="h-5 w-5 text-green-600" />
+                    <div className="h-16 w-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-2xl font-bold text-green-600">₹</span>
                     </div>
-                    <div className="text-xs text-muted-foreground">Salary</div>
-                    <div className="font-semibold">{job.salary}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Salary</div>
+                    <div className="text-xl font-semibold text-gray-900 dark:text-gray-100">{job.salary}</div>
                   </div>
                   <div className="text-center">
-                    <div className="h-10 w-10 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <Users className="h-5 w-5 text-purple-600" />
+                    <div className="h-16 w-16 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="h-8 w-8 text-purple-600" />
                     </div>
-                    <div className="text-xs text-muted-foreground">Job Type</div>
-                    <div className="font-semibold">{job.jobType}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Job Type</div>
+                    <div className="text-xl font-semibold text-gray-900 dark:text-gray-100">{job.jobType}</div>
                   </div>
                   <div className="text-center">
-                    <div className="h-10 w-10 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                      <Calendar className="h-5 w-5 text-orange-600" />
+                    <div className="h-16 w-16 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Calendar className="h-8 w-8 text-orange-600" />
                     </div>
-                    <div className="text-xs text-muted-foreground">Posted</div>
-                    <div className="font-semibold">{job.postedTime}</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Posted</div>
+                    <div className="text-xl font-semibold text-gray-900 dark:text-gray-100">{job.postedTime}</div>
                   </div>
                 </div>
               </Card>
@@ -486,18 +473,13 @@ export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) 
                   <div className="ml-6">
                     <Button 
                       onClick={() => {
-                        console.log('Apply button clicked - isAuthenticated:', isAuthenticated, 'user:', user);
-                        if (isAuthenticated) {
-                          setShowApplicationForm(true)
-                        } else {
-                          setShowAuthModal(true)
-                        }
+                        setIsApplicationModalOpen(true)
                       }}
                       size="lg"
                       className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg px-8 py-3"
                     >
                       <Send className="h-4 w-4 mr-2" />
-                      {isAuthenticated ? "Apply Now" : "Login to Apply"}
+                      Apply Now
                     </Button>
                   </div>
                 </div>
@@ -630,12 +612,13 @@ export function JobDetailsModal({ job, isOpen, onClose }: JobDetailsModalProps) 
         )}
       </DialogContent>
       
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)}
-        defaultTab="login"
-      />
-      
+      {job && (
+        <ApplicationModal
+          job={job}
+          isOpen={isApplicationModalOpen}
+          onClose={() => setIsApplicationModalOpen(false)}
+        />
+      )}
     </Dialog>
   )
 }

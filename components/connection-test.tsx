@@ -1,243 +1,164 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { CheckCircle, XCircle, Loader2, AlertCircle, Copy } from "lucide-react"
-
-interface ConnectionStatus {
-  status: 'checking' | 'connected' | 'failed' | 'no-backend'
-  message: string
-  details?: string
-}
+import { useState, useEffect } from 'react'
+import { apiClient } from '@/lib/api-client'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 export function ConnectionTest() {
-  const [backendStatus, setBackendStatus] = useState<ConnectionStatus>({
-    status: 'checking',
-    message: 'Checking backend connection...'
+  const [status, setStatus] = useState<{
+    backend: 'connected' | 'disconnected' | 'checking'
+    database: 'connected' | 'disconnected' | 'checking'
+    storage: 'connected' | 'disconnected' | 'checking'
+    lastChecked?: string
+  }>({
+    backend: 'checking',
+    database: 'checking',
+    storage: 'checking'
   })
 
-  const [apiStatus, setApiStatus] = useState<ConnectionStatus>({
-    status: 'checking', 
-    message: 'Testing API endpoints...'
-  })
+  const [testResults, setTestResults] = useState<any>(null)
 
-  const testBackendConnection = async () => {
-    setBackendStatus({ status: 'checking', message: 'Checking backend connection...' })
-    
+  const runConnectionTest = async () => {
+    setStatus({
+      backend: 'checking',
+      database: 'checking',
+      storage: 'checking'
+    })
+
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-      console.log('Testing connection to:', apiUrl)
+      // Test backend connection
+      const backendResponse = await fetch('http://localhost:3001/api/health')
+      const healthData = await backendResponse.json()
       
-      const response = await fetch(`${apiUrl}/api/jobs`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      setTestResults(healthData)
+      
+      setStatus({
+        backend: backendResponse.ok ? 'connected' : 'disconnected',
+        database: healthData.services?.database === 'Supabase Connected' ? 'connected' : 'disconnected',
+        storage: healthData.services?.storage === 'Supabase Storage' ? 'connected' : 'disconnected',
+        lastChecked: new Date().toLocaleTimeString()
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setBackendStatus({
-          status: 'connected',
-          message: 'Backend connected successfully!',
-          details: `Found ${data.jobs?.length || 0} jobs`
-        })
-      } else {
-        setBackendStatus({
-          status: 'failed',
-          message: `Backend responded with error: ${response.status}`,
-          details: response.statusText
-        })
-      }
     } catch (error) {
-      console.error('Backend connection error:', error)
-      setBackendStatus({
-        status: 'no-backend',
-        message: 'Cannot connect to backend server',
-        details: 'Make sure backend is running on port 3001'
-      })
-    }
-  }
-
-  const testApiEndpoints = async () => {
-    setApiStatus({ status: 'checking', message: 'Testing API endpoints...' })
-    
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-    const endpoints = [
-      { name: 'Jobs', path: '/api/jobs', requiresAuth: false },
-      { name: 'Users', path: '/api/users', requiresAuth: true },
-      { name: 'Applications', path: '/api/applications', requiresAuth: true }
-    ]
-
-    type EndpointResult = {
-      name: string
-      status: string
-      code: number | string
-    }
-
-    const results: EndpointResult[] = []
-    
-    for (const endpoint of endpoints) {
-      try {
-        const response = await fetch(`${apiUrl}${endpoint.path}`)
-        let status = 'error'
-        let code: number | string = response.status
-        
-        if (response.ok) {
-          status = 'success'
-        } else if (endpoint.requiresAuth && response.status === 401) {
-          // 401 for auth-required endpoints means the endpoint is working
-          status = 'success'
-          code = '401 (Auth Required)'
-        }
-        
-        results.push({
-          name: endpoint.name,
-          status,
-          code
-        })
-      } catch (error) {
-        results.push({
-          name: endpoint.name, 
-          status: 'failed',
-          code: 'N/A'
-        })
-      }
-    }
-
-    const successCount = results.filter(r => r.status === 'success').length
-    const totalCount = results.length
-
-    if (successCount === totalCount) {
-      setApiStatus({
-        status: 'connected',
-        message: 'All API endpoints working!',
-        details: `${successCount}/${totalCount} endpoints responding (some require auth)`
-      })
-    } else if (successCount > 0) {
-      setApiStatus({
-        status: 'failed',
-        message: 'Some API endpoints failing',
-        details: `${successCount}/${totalCount} endpoints working`
-      })
-    } else {
-      setApiStatus({
-        status: 'failed',
-        message: 'No API endpoints responding',
-        details: 'Backend may not be running'
+      console.error('Connection test failed:', error)
+      setStatus({
+        backend: 'disconnected',
+        database: 'disconnected',
+        storage: 'disconnected',
+        lastChecked: new Date().toLocaleTimeString()
       })
     }
   }
 
   useEffect(() => {
-    testBackendConnection()
-    testApiEndpoints()
+    runConnectionTest()
   }, [])
 
-  const getStatusIcon = (status: ConnectionStatus['status']) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'checking':
-        return <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-      case 'connected':
-        return <CheckCircle className="h-5 w-5 text-green-500" />
-      case 'failed':
-        return <XCircle className="h-5 w-5 text-red-500" />
-      case 'no-backend':
-        return <AlertCircle className="h-5 w-5 text-orange-500" />
+      case 'connected': return 'bg-green-500'
+      case 'disconnected': return 'bg-red-500'
+      case 'checking': return 'bg-yellow-500 animate-pulse'
+      default: return 'bg-gray-500'
     }
   }
 
-  const getStatusBadge = (status: ConnectionStatus['status']) => {
+  const getStatusText = (status: string) => {
     switch (status) {
-      case 'checking':
-        return <Badge variant="secondary">Checking</Badge>
-      case 'connected':
-        return <Badge className="bg-green-100 text-green-800">Connected</Badge>
-      case 'failed':
-        return <Badge variant="destructive">Failed</Badge>
-      case 'no-backend':
-        return <Badge className="bg-orange-100 text-orange-800">No Backend</Badge>
+      case 'connected': return 'Connected'
+      case 'disconnected': return 'Disconnected'
+      case 'checking': return 'Checking...'
+      default: return 'Unknown'
     }
   }
 
   return (
-    <div className="space-y-4 p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Backend-Frontend Connection Test</h2>
-        <p className="text-muted-foreground">
-          This component tests the connection between frontend and backend services.
-        </p>
-      </div>
-
-      <Card className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            {getStatusIcon(backendStatus.status)}
-            <div>
-              <h3 className="font-semibold">Backend Connection</h3>
-              <p className="text-sm text-muted-foreground">{backendStatus.message}</p>
-              {backendStatus.details && (
-                <p className="text-xs text-muted-foreground mt-1">{backendStatus.details}</p>
-              )}
-            </div>
-          </div>
-          {getStatusBadge(backendStatus.status)}
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            {getStatusIcon(apiStatus.status)}
-            <div>
-              <h3 className="font-semibold">API Endpoints</h3>
-              <p className="text-sm text-muted-foreground">{apiStatus.message}</p>
-              {apiStatus.details && (
-                <p className="text-xs text-muted-foreground mt-1">{apiStatus.details}</p>
-              )}
-            </div>
-          </div>
-          {getStatusBadge(apiStatus.status)}
-        </div>
-
-        <div className="flex space-x-2 pt-4 border-t">
-          <Button 
-            onClick={() => {
-              testBackendConnection()
-              testApiEndpoints()
-            }}
-            variant="outline" 
-            size="sm"
-          >
-            Test Again
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          Backend Connection Status
+          <Button onClick={runConnectionTest} size="sm" variant="outline">
+            Refresh
           </Button>
-          <Button 
-            onClick={() => {
-              console.log('Backend Status:', backendStatus)
-              console.log('API Status:', apiStatus)
-              console.log('API URL:', process.env.NEXT_PUBLIC_API_URL)
-            }}
-            variant="outline" 
-            size="sm"
-          >
-            Debug Info
-          </Button>
+        </CardTitle>
+        <CardDescription>
+          Real-time status of backend services
+          {status.lastChecked && (
+            <span className="block text-xs text-gray-500 mt-1">
+              Last checked: {status.lastChecked}
+            </span>
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Connection Status */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="flex flex-col items-center p-3 border rounded-lg">
+            <div className={`w-4 h-4 rounded-full mb-2 ${getStatusColor(status.backend)}`} />
+            <span className="text-sm font-medium">Backend API</span>
+            <span className="text-xs text-gray-500">{getStatusText(status.backend)}</span>
+          </div>
+          
+          <div className="flex flex-col items-center p-3 border rounded-lg">
+            <div className={`w-4 h-4 rounded-full mb-2 ${getStatusColor(status.database)}`} />
+            <span className="text-sm font-medium">Database</span>
+            <span className="text-xs text-gray-500">{getStatusText(status.database)}</span>
+          </div>
+          
+          <div className="flex flex-col items-center p-3 border rounded-lg">
+            <div className={`w-4 h-4 rounded-full mb-2 ${getStatusColor(status.storage)}`} />
+            <span className="text-sm font-medium">File Storage</span>
+            <span className="text-xs text-gray-500">{getStatusText(status.storage)}</span>
+          </div>
         </div>
-      </Card>
 
-      <Card className="p-6 bg-blue-50 dark:bg-blue-900/20">
-        <h3 className="font-semibold mb-2 flex items-center">
-          <AlertCircle className="h-4 w-4 mr-2 text-blue-600" />
-          Setup Instructions
-        </h3>
-        <div className="text-sm space-y-2 text-blue-700 dark:text-blue-300">
-          <p>1. Ensure backend is running: <code>cd job-management-backend1 && npm run dev</code></p>
-          <p>2. Backend should be on port 3001: <code>http://localhost:3001</code></p>
-          <p>3. Frontend should be on port 3000: <code>http://localhost:3000</code></p>
-          <p>4. Check environment variables in <code>.env.local</code> files</p>
-          <p>5. <strong>Note:</strong> Users/Applications APIs require authentication (401 response is normal)</p>
-        </div>
-      </Card>
-    </div>
+        {/* Detailed Information */}
+        {testResults && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-medium mb-2">Server Information:</h4>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>Status: <Badge variant="outline">{testResults.status}</Badge></div>
+              <div>Environment: <Badge variant="outline">{testResults.environment}</Badge></div>
+              <div>Version: <Badge variant="outline">{testResults.version}</Badge></div>
+              <div>Uptime: <Badge variant="outline">{Math.floor(testResults.uptime)}s</Badge></div>
+            </div>
+            
+            {testResults.endpoints && (
+              <div className="mt-3">
+                <h5 className="font-medium text-xs mb-1">Available Endpoints:</h5>
+                <div className="text-xs text-gray-600">
+                  <div>Jobs: {testResults.endpoints.jobs}</div>
+                  <div>Applications: {testResults.endpoints.applications}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Connection Instructions */}
+        {status.backend === 'disconnected' && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <h4 className="font-medium text-red-800 mb-2">Backend Not Connected</h4>
+            <p className="text-sm text-red-700 mb-2">
+              Make sure your backend server is running:
+            </p>
+            <code className="block bg-red-100 p-2 rounded text-xs">
+              cd job-backend && npm run dev
+            </code>
+          </div>
+        )}
+
+        {status.backend === 'connected' && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <h4 className="font-medium text-green-800 mb-2">✅ All Systems Operational</h4>
+            <p className="text-sm text-green-700">
+              Backend is connected and ready to handle job applications.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
